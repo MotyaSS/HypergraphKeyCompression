@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
+	keycomp.GetRational([]int{4, 2, 6, 7})
 	fmt.Println(keycomp.GetPath(13, 44))
 	// LLLRRLRL:
 	// 1/1
@@ -17,4 +18,5 @@ func main() {
 	// 5/17
 	// 8/27
 	// 13/44
+	fmt.Println(keycomp.RestoreFromPath("LLLRRLRL"))
 }
