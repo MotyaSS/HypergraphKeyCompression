@@ -6,8 +6,9 @@ import (
 )
 
 func main() {
-	keycomp.GetRational([]int{4, 2, 6, 7})
-	fmt.Println(keycomp.GetPath(13, 44))
+	//keycomp.GetRational([]int{4, 2, 6, 7})
+	//fmt.Println(keycomp.GetPath(13, 44))
+	fmt.Println(keycomp.RestoreFromPath("LRLRLLR"))
 	// LLLRRLRL:
 	// 1/1
 	// 1/2
