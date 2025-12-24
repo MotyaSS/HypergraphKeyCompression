@@ -7,17 +7,14 @@ import (
 
 func main() {
 	//keycomp.GetRational([]int{4, 2, 6, 7})
-	//fmt.Println(keycomp.GetPath(13, 44))
-	fmt.Println(keycomp.RestoreFromPath("LRLRLLR"))
-	// LLLRRLRL:
-	// 1/1
-	// 1/2
-	// 1/3
-	// 1/4
-	// 2/7
-	// 3/10
-	// 5/17
-	// 8/27
-	// 13/44
-	fmt.Println(keycomp.RestoreFromPath("LLLRRLRL"))
+	fmt.Println(string(keycomp.GetPath(13, 44)))
+	fmt.Println(keycomp.RestoreFromPath([]byte("LLLRRLRL")))
+
+	fmt.Println(keycomp.RestoreFromPath([]byte("LRLRLLR")))
+
+	compressed := "LRLLLRLRRRLR"
+	num, den := keycomp.RestoreFromPath([]byte(compressed))
+	fmt.Println(string(keycomp.GetPath(num, den)))
+	fmt.Println(compressed)
+
 }

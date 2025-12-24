@@ -22,7 +22,7 @@ func Decompress(compressed []byte) []int {
 }
 
 // GetPath takes a rational number and returns path to that rational consisting of 'L' and 'R'
-func GetPath(num, denom int) string {
+func GetPath(num, denom int) []byte {
 	left := Rational{0, 1}
 	right := Rational{1, 0}
 	cur := Rational{1, 1}
@@ -41,7 +41,7 @@ func GetPath(num, denom int) string {
 			path.WriteRune('R')
 		}
 	}
-	return path.String()
+	return path.Bytes() // TODO compress to 1 and 0 before return
 }
 
 // RestoreFromPath takes a bytes sequence consisting of 'L' and 'R' and returns corresponding rational
@@ -49,6 +49,8 @@ func RestoreFromPath(path []byte) (a, b int) {
 	left := Rational{0, 1}
 	right := Rational{1, 0}
 	cur := Rational{1, 1}
+
+	// TODO decompress path from (1/0) => (L/R)
 
 	for i := range path {
 		if path[i] == 'L' {
