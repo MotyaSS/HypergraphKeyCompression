@@ -33,7 +33,6 @@ func RationalToPath(num, denom int) []byte {
 	target := Rational{num, denom}
 
 	path := bytes.Buffer{}
-
 	for target != cur {
 		val := cmp(target, cur)
 		if val < 0 {
@@ -97,21 +96,6 @@ func mediant(left, right Rational) Rational {
 	}
 }
 
-// compressPath takes a bytes sequence consisting of 'L' and 'R' bytes and returns
-// shortened bytes sequence of 0's and 1's (0 representing 'L' and 1 representing 'R')
-func compressPath(path []byte) (bytes []byte, size int) {
-	res := make([]byte, (len(path)+7)/8)
-	for i := range path {
-		a := byte(0)
-		if path[i] == 'R' {
-			a = 1
-		}
-
-		res[i/8] ^= a >> (uint8(i%8) + 1)
-	}
-	return res, len(path)
-}
-
 // shift performs +0, +1, +1, +1,..., +2 conversion for nums
 func shift(nums []int) []int {
 	res := make([]int, len(nums))
@@ -166,16 +150,31 @@ func getContinuedFraction(num, denom int) []int {
 	return res
 }
 
+// compressPath takes a bytes sequence consisting of 'L' and 'R' bytes and returns
+// shortened bytes sequence of 0's and 1's (0 representing 'L' and 1 representing 'R')
+func compressPath(path []byte) ([]byte, int) {
+	res := make([]byte, (len(path)+7)/8)
+	for i := range path {
+		a := byte(0)
+		if path[i] == 'R' {
+			a = 1
+		}
+		// 0 1 2 3 4 5 6 7
+		res[i/8] ^= a << (7 - i%8)
+	}
+	return res, len(path)
+}
+
 // decompressPath takes a bytes sequence of 0's and 1's and
 // returns corresponding bytes sequence of 'L' and 'R' where 'L' stands for 0 and 'R' stands for 1
 func decompressPath(path []byte, size int) []byte {
 	res := make([]byte, size)
 	for i := 0; i < size; i++ {
-		bit := path[i/8] ^ (1 >> uint(i%8))
-		if bit == 1 {
-			res[i] = 'R'
-		} else {
+		bit := path[i/8] & (1 << uint(7-i%8))
+		if bit == 0 {
 			res[i] = 'L'
+		} else {
+			res[i] = 'R'
 		}
 	}
 

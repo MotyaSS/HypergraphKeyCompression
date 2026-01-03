@@ -1,6 +1,9 @@
 package main
 
-import "github.com/MotyaSS/HypergraphKeyCompression/keycomp"
+import (
+	"fmt"
+	"github.com/MotyaSS/HypergraphKeyCompression/keycomp"
+)
 
 func getContinuedFraction(num, denom int) []int {
 	if num < 0 || denom == 0 {
@@ -16,9 +19,11 @@ func getContinuedFraction(num, denom int) []int {
 }
 
 func main() {
-	// Я ХУЙ ЗНАЕТ ЧЕ Я ПОНАПИСАЛ, НАДО РАЗБИРАТЬСЯ НА ЧИСТУЮ ГОЛОВУ
 
-	keycomp.Compress(getContinuedFraction(20, 25))
+	comp, size := keycomp.Compress(getContinuedFraction(59, 77))
+	fmt.Println(getContinuedFraction(59, 77))
+	fmt.Println(keycomp.Decompress(comp, size))
+
 	//fmt.Println(string(keycomp.GetPath(13, 44)))
 	//fmt.Println(keycomp.RestoreFromPath([]byte("LLLRRLRL")))
 	//
