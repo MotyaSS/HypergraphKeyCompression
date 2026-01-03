@@ -121,7 +121,6 @@ func reverseShift(nums []int) []int {
 
 // getRational returns rational representation of finite continued fraction
 func getRational(nums []int) (num, denom int) {
-
 	numPrev2, denPrev2 := 0, 1
 	numPrev1, denPrev1 := 1, 0
 	numK, denK := 0, 0
@@ -152,17 +151,17 @@ func getContinuedFraction(num, denom int) []int {
 
 // compressPath takes a bytes sequence consisting of 'L' and 'R' bytes and returns
 // shortened bytes sequence of 0's and 1's (0 representing 'L' and 1 representing 'R')
-func compressPath(path []byte) ([]byte, int) {
-	res := make([]byte, (len(path)+7)/8)
+func compressPath(path []byte) (bytes []byte, size int) {
+	bytes = make([]byte, (len(path)+7)/8)
 	for i := range path {
 		a := byte(0)
 		if path[i] == 'R' {
 			a = 1
 		}
 		// 0 1 2 3 4 5 6 7
-		res[i/8] ^= a << (7 - i%8)
+		bytes[i/8] ^= a << (7 - i%8)
 	}
-	return res, len(path)
+	return bytes, len(path)
 }
 
 // decompressPath takes a bytes sequence of 0's and 1's and
@@ -170,7 +169,7 @@ func compressPath(path []byte) ([]byte, int) {
 func decompressPath(path []byte, size int) []byte {
 	res := make([]byte, size)
 	for i := 0; i < size; i++ {
-		bit := path[i/8] & (1 << uint(7-i%8))
+		bit := (path[i/8] >> uint(7-i%8)) & 1
 		if bit == 0 {
 			res[i] = 'L'
 		} else {
