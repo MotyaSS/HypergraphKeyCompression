@@ -12,9 +12,8 @@ type Rational struct {
 
 // Compress compresses hypergraph encryption algorithm key
 func Compress(key []int) (compressed []byte, size int) {
-	path := RationalToPath(getRational(shift(key))) // L/R bytes
-
-	return compressPath(path) // 0/1 bits
+	path := RationalToPath(getRational(transform(key))) // L/R bytes
+	return compressPath(path)                           // 0/1 bits
 }
 
 // Decompress decompresses hypergraph encryption algorithm key
@@ -22,7 +21,7 @@ func Decompress(compressed []byte, size int) []int {
 	path := decompressPath(compressed, size)
 	key := getContinuedFraction(PathToRational(path))
 
-	return reverseShift(key)
+	return reverseTransform(key)
 }
 
 // RationalToPath takes a rational number and returns path to that rational consisting of 'L' and 'R'
@@ -85,7 +84,6 @@ func cmp(n, m Rational) int {
 	right := new(big.Int).Mul(n2, d1)
 
 	return left.Cmp(right)
-
 }
 
 // mediant returns mediant of two Rational numbers
@@ -96,26 +94,26 @@ func mediant(left, right Rational) Rational {
 	}
 }
 
-// shift performs +0, +1, +1, +1,..., +2 conversion for nums
-func shift(nums []int) []int {
+// transform performs +0, +1, +1, +1,..., +2 conversion for nums
+func transform(nums []int) []int {
 	res := make([]int, len(nums))
-	res[0] = nums[0]
+	res[0] = nums[len(nums)-1]
 	for i := 1; i < len(nums); i++ {
-		res[i] = nums[i] + 1
+		res[i] = nums[len(nums)-1-i] - nums[len(nums)-i] + 1
 	}
 	res[len(res)-1] += 1
 	return res
 }
 
-// reverseShift performs -0, -1, -1, -1, ..., -2 conversion for nums
-func reverseShift(nums []int) []int {
+// reverseTransform performs -0, -1, -1, -1, ..., -2 conversion for nums
+func reverseTransform(nums []int) []int {
 	res := make([]int, len(nums))
-	res[0] = nums[0]
+	res[len(nums)-1] = nums[0]
 	for i := 1; i < len(res); i++ {
-		res[i] = nums[i] - 1
+		res[len(nums)-1-i] = nums[i] + res[len(nums)-i] - 1
 	}
-	res[len(res)-1] -= 1
 
+	res[0] -= 1
 	return res
 }
 
@@ -158,7 +156,6 @@ func compressPath(path []byte) (bytes []byte, size int) {
 		if path[i] == 'R' {
 			a = 1
 		}
-		// 0 1 2 3 4 5 6 7
 		bytes[i/8] ^= a << (7 - i%8)
 	}
 	return bytes, len(path)
@@ -176,6 +173,5 @@ func decompressPath(path []byte, size int) []byte {
 			res[i] = 'R'
 		}
 	}
-
 	return res
 }

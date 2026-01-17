@@ -5,24 +5,12 @@ import (
 	"github.com/MotyaSS/HypergraphKeyCompression/keycomp"
 )
 
-func getContinuedFraction(num, denom int) []int {
-	if num < 0 || denom == 0 {
-		panic("denom cannot be 0")
-	}
-
-	res := make([]int, 0)
-	for denom != 0 { //Euclidean algorithm
-		res = append(res, num/denom)
-		num, denom = denom, num%denom
-	}
-	return res
-}
-
 func main() {
-
-	comp, size := keycomp.Compress(getContinuedFraction(59, 77))
-	fmt.Println(getContinuedFraction(59, 77))
-	fmt.Println(keycomp.Decompress(comp, size))
+	key := []int{730, 705, 637, 593, 572, 571, 130}
+	comp, size := keycomp.Compress(key)
+	fmt.Printf("original key, size: %v %v\n", len(key)*8, key)
+	fmt.Printf("compressed size, key: %v, %v\n", len(comp), comp)
+	fmt.Printf("decompressed key: %v\n", keycomp.Decompress(comp, size))
 
 	//fmt.Println(string(keycomp.GetPath(13, 44)))
 	//fmt.Println(keycomp.RestoreFromPath([]byte("LLLRRLRL")))
