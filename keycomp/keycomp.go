@@ -6,43 +6,80 @@ import (
 )
 
 type Rational struct {
-	Num   int
-	Denom int
+	Num   *big.Int
+	Denom *big.Int
+}
+
+func newRational(n, d *big.Int) Rational {
+	return Rational{
+		Num:   new(big.Int).Set(n),
+		Denom: new(big.Int).Set(d),
+	}
 }
 
 // Compress compresses hypergraph encryption algorithm key
 func Compress(key []int) (compressed []byte, size int) {
-	path := RationalToPath(getRational(transform(key))) // L/R bytes
-	return compressPath(path)                           // 0/1 bits
+	num, denom := getRationalBig(transform(key))
+	path := RationalToPath(num, denom)
+	return compressPath(path)
 }
 
 // Decompress decompresses hypergraph encryption algorithm key
 func Decompress(compressed []byte, size int) []int {
 	path := decompressPath(compressed, size)
-	key := getContinuedFraction(PathToRational(path))
 
-	return reverseTransform(key)
+	num, denom := PathToRational(path)
+
+	cf := getContinuedFractionBig(num, denom)
+
+	return reverseTransform(cf)
+}
+
+// getRationalBig returns rational representation of finite continued fraction
+func getRationalBig(nums []int) (*big.Int, *big.Int) {
+	numPrev2 := big.NewInt(0)
+	denPrev2 := big.NewInt(1)
+	numPrev1 := big.NewInt(1)
+	denPrev1 := big.NewInt(0)
+
+	for _, a := range nums {
+		aBig := big.NewInt(int64(a))
+
+		numK := new(big.Int).Add(
+			new(big.Int).Mul(aBig, numPrev1),
+			numPrev2,
+		)
+
+		denK := new(big.Int).Add(
+			new(big.Int).Mul(aBig, denPrev1),
+			denPrev2,
+		)
+
+		numPrev2, numPrev1 = numPrev1, numK
+		denPrev2, denPrev1 = denPrev1, denK
+	}
+
+	return numPrev1, denPrev1
 }
 
 // RationalToPath takes a rational number and returns path to that rational consisting of 'L' and 'R'
-func RationalToPath(num, denom int) []byte {
-	left := Rational{0, 1}
-	right := Rational{1, 0}
-	cur := Rational{1, 1}
-	target := Rational{num, denom}
+func RationalToPath(num, denom *big.Int) []byte {
+	left := newRational(big.NewInt(0), big.NewInt(1))
+	right := newRational(big.NewInt(1), big.NewInt(0))
+	cur := newRational(big.NewInt(1), big.NewInt(1))
+	target := newRational(num, denom)
 
-	path := bytes.Buffer{}
-	for target != cur {
-		val := cmp(target, cur)
-		if val < 0 {
+	var path bytes.Buffer
+
+	for cmp(target, cur) != 0 {
+		if cmp(target, cur) < 0 {
 			right = cur
 			cur = mediant(left, cur)
-			path.WriteRune('L')
-		}
-		if val > 0 {
+			path.WriteByte('L')
+		} else {
 			left = cur
 			cur = mediant(cur, right)
-			path.WriteRune('R')
+			path.WriteByte('R')
 		}
 	}
 
@@ -50,19 +87,18 @@ func RationalToPath(num, denom int) []byte {
 }
 
 // PathToRational takes a bytes sequence consisting of 'L' and 'R' and returns corresponding rational
-func PathToRational(path []byte) (num, denom int) {
-	left := Rational{0, 1}
-	right := Rational{1, 0}
-	cur := Rational{1, 1}
-	for i := range path {
-		if path[i] == 'L' {
+func PathToRational(path []byte) (*big.Int, *big.Int) {
+	left := newRational(big.NewInt(0), big.NewInt(1))
+	right := newRational(big.NewInt(1), big.NewInt(0))
+	cur := newRational(big.NewInt(1), big.NewInt(1))
+
+	for _, p := range path {
+		if p == 'L' {
 			right = cur
 			cur = mediant(left, right)
-		} else if path[i] == 'R' {
+		} else {
 			left = cur
 			cur = mediant(left, right)
-		} else {
-			panic("smthing went wrong while restoring path")
 		}
 	}
 
@@ -74,76 +110,40 @@ func PathToRational(path []byte) (num, denom int) {
 // >0 if a>b,
 // <0 if a<b,
 // 0 if a == b
-func cmp(n, m Rational) int {
-	n1 := big.NewInt(int64(n.Num))
-	d1 := big.NewInt(int64(n.Denom))
-	n2 := big.NewInt(int64(m.Num))
-	d2 := big.NewInt(int64(m.Denom))
-
-	left := new(big.Int).Mul(n1, d2)
-	right := new(big.Int).Mul(n2, d1)
-
+func cmp(a, b Rational) int {
+	left := new(big.Int).Mul(a.Num, b.Denom)
+	right := new(big.Int).Mul(b.Num, a.Denom)
 	return left.Cmp(right)
 }
 
 // mediant returns mediant of two Rational numbers
 func mediant(left, right Rational) Rational {
 	return Rational{
-		Num:   left.Num + right.Num,
-		Denom: left.Denom + right.Denom,
+		Num:   new(big.Int).Add(left.Num, right.Num),
+		Denom: new(big.Int).Add(left.Denom, right.Denom),
 	}
 }
 
-// transform performs +0, +1, +1, +1,..., +2 conversion for nums
-func transform(nums []int) []int {
-	res := make([]int, len(nums))
-	res[0] = nums[len(nums)-1]
-	for i := 1; i < len(nums); i++ {
-		res[i] = nums[len(nums)-1-i] - nums[len(nums)-i] + 1
-	}
-	res[len(res)-1] += 1
-	return res
-}
-
-// reverseTransform performs -0, -1, -1, -1, ..., -2 conversion for nums
-func reverseTransform(nums []int) []int {
-	res := make([]int, len(nums))
-	res[len(nums)-1] = nums[0]
-	for i := 1; i < len(res); i++ {
-		res[len(nums)-1-i] = nums[i] + res[len(nums)-i] - 1
-	}
-
-	res[0] -= 1
-	return res
-}
-
-// getRational returns rational representation of finite continued fraction
-func getRational(nums []int) (num, denom int) {
-	numPrev2, denPrev2 := 0, 1
-	numPrev1, denPrev1 := 1, 0
-	numK, denK := 0, 0
-	for _, num := range nums {
-		numK = num*numPrev1 + numPrev2
-		denK = num*denPrev1 + denPrev2
-
-		numPrev2, numPrev1 = numPrev1, numK
-		denPrev2, denPrev1 = denPrev1, denK
-	}
-
-	return numPrev1, denPrev1
-}
-
-// getContinuedFraction returns representation of rational as continued fraction
-func getContinuedFraction(num, denom int) []int {
-	if num < 0 || denom == 0 {
+// getContinuedFractionBig returns representation of rational as continued fraction
+func getContinuedFractionBig(num, denom *big.Int) []int {
+	if denom.Sign() == 0 {
 		panic("denom cannot be 0")
 	}
 
+	n := new(big.Int).Set(num)
+	d := new(big.Int).Set(denom)
+
 	res := make([]int, 0)
-	for denom != 0 { //Euclidean algorithm
-		res = append(res, num/denom)
-		num, denom = denom, num%denom
+
+	for d.Sign() != 0 {
+		quot := new(big.Int).Div(n, d)
+
+		res = append(res, int(quot.Int64())) // guaranteed safe
+
+		tmp := new(big.Int).Mod(n, d)
+		n, d = d, tmp
 	}
+
 	return res
 }
 
@@ -173,5 +173,37 @@ func decompressPath(path []byte, size int) []byte {
 			res[i] = 'R'
 		}
 	}
+	return res
+}
+
+// transform performs conversion for nums
+// Example
+// [8 6 4 2 1] ->
+// [1 (2-1) (4-2) (6-4) (8-6)] ->
+// [1 2 3 3 4]
+func transform(nums []int) []int {
+	res := make([]int, len(nums))
+	res[0] = nums[len(nums)-1]
+	for i := 1; i < len(nums); i++ {
+		res[i] = nums[len(nums)-1-i] - nums[len(nums)-i] + 1
+	}
+	res[len(res)-1] += 1
+	return res
+}
+
+// reverseTransform performs reversed conversion for nums
+// Example
+// [1 2 3 3 4] ->
+// [1 1 2 2 2] ->
+// [1 (1+1) (1+1+2) (1+1+2+2) (1+1+2+2+2)] ->
+// [1 2 4 6 8]
+func reverseTransform(nums []int) []int {
+	res := make([]int, len(nums))
+	res[len(nums)-1] = nums[0]
+	for i := 1; i < len(res); i++ {
+		res[len(nums)-1-i] = nums[i] + res[len(nums)-i] - 1
+	}
+
+	res[0] -= 1
 	return res
 }
