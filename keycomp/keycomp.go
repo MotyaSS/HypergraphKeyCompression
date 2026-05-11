@@ -18,21 +18,45 @@ func newRational(n, d *big.Int) Rational {
 }
 
 // Compress compresses hypergraph encryption algorithm key
-func Compress(key []int) (compressed []byte, size int) {
+func Compress(key []int, n uint16, k uint16) []byte {
 	num, denom := getRationalBig(transform(key))
 	path := RationalToPath(num, denom)
-	return compressPath(path)
+	compBytes, size := compressPath(path)
+
+	res := make([]byte, 5+len(compBytes))
+	res[0] = byte(n >> 8)
+	res[1] = byte(n)
+	res[2] = byte(k >> 8)
+	res[3] = byte(k)
+	lastBits := size % 8
+	if lastBits == 0 && size > 0 {
+		lastBits = 8
+	}
+	res[4] = byte(lastBits)
+	copy(res[5:], compBytes)
+
+	return res
 }
 
 // Decompress decompresses hypergraph encryption algorithm key
-func Decompress(compressed []byte, size int) []int {
-	path := decompressPath(compressed, size)
+func Decompress(compressed []byte) ([]int, uint16, uint16) {
+	n := uint16(compressed[0])<<8 | uint16(compressed[1])
+	k := uint16(compressed[2])<<8 | uint16(compressed[3])
+	lastBits := int(compressed[4])
+
+	compBytes := compressed[5:]
+	size := len(compBytes) * 8
+	if size > 0 {
+		size -= (8 - lastBits) % 8
+	}
+
+	path := decompressPath(compBytes, size)
 
 	num, denom := PathToRational(path)
 
 	cf := getContinuedFractionBig(num, denom)
 
-	return reverseTransform(cf)
+	return reverseTransform(cf), n, k
 }
 
 // getRationalBig returns rational representation of finite continued fraction
